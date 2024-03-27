@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <!-- change to a much simpler tab title -->
-    <title>SMS Viewer</title>
+    <title>Xem Tin Nhắn</title>
 
     <script src="/js/alpinejs.min.js" defer></script>
     <link rel="stylesheet" href="/css/bulma.css" />
@@ -18,7 +18,7 @@
     <nav class="navbar is-black" x-data="{ isOpen: false }">
       <div class="container">
         <div class="navbar-brand">
-          <a class="navbar-item brand-text" href="/"> Simple Admin </a>
+          <a class="navbar-item brand-text" href="/"> Noname 5G </a>
           <a
             role="button"
             class="navbar-burger burger"
@@ -35,12 +35,11 @@
           :class="isOpen ? 'is-active' : ''"
         >
           <div class="navbar-start">
-            <a class="navbar-item" href="/"> Connection Info </a>
-            <a class="navbar-item" href="/atcommander.html"> AT Commands </a>
-            <a class="navbar-item" href="/bandlock.html"> Band Locking </a>
-            <a class="navbar-item" href="/sms.html"> SMS </a>
-            <a class="navbar-item" href="/ttl.html"> TTL Changer </a>
-            <a class="navbar-item" href="/speedtest.html"> Speedtest </a>
+            <a class="navbar-item" href="/"> Thông Tin </a>
+            <a class="navbar-item" href="/atcommander.html"> Lệnh AT </a>
+            <a class="navbar-item" href="/sms.html"> Xem SMS </a>
+            <a class="navbar-item" href="/ttl.html"> Đổi TTL </a>
+            <a class="navbar-item" href="/speedtest.html"> Kiểm Tra Speedtest </a>
           </div>
         </div>
       </div>
@@ -83,7 +82,7 @@
                       class="textarea"
                       placeholder="Tin Nhắn hiển thị ở đây"
                       readonly
-                      rows="30"
+                      rows="50"
                       cols="120"
                       x-model="atCommandResponse"
                       :disabled="isLoading"
