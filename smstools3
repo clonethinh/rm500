@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Send SMS</title>
+</head>
+<body>
+    <h1>Send SMS</h1>
+    <form id="smsForm">
+        <label for="phoneNumber">Phone Number:</label><br>
+        <input type="text" id="phoneNumber" name="phoneNumber" required><br>
+        <label for="message">Message:</label><br>
+        <textarea id="message" name="message" rows="4" cols="50" required></textarea><br>
+        <button type="submit">Send SMS</button>
+    </form>
+
+    <script>
+        document.getElementById('smsForm').addEventListener('submit', function(event) {
+            event.preventDefault(); // Prevent form submission
+
+            // Get form data
+            var phoneNumber = document.getElementById('phoneNumber').value;
+            var message = document.getElementById('message').value;
+
+            // AJAX request to send SMS
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', '/send_sms', true);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    alert('SMS sent successfully!');
+                } else {
+                    alert('Failed to send SMS.');
+                }
+            };
+            xhr.send(JSON.stringify({ phoneNumber: phoneNumber, message: message }));
+        });
+    </script>
+</body>
+</html>
