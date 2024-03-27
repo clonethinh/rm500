@@ -35,11 +35,11 @@
           :class="isOpen ? 'is-active' : ''"
         >
           <div class="navbar-start">
-            <a class="navbar-item" href="/"> Connection Info </a>
-            <a class="navbar-item" href="/atcommander.html"> AT Commands </a>
+            <a class="navbar-item" href="/"> Thông Tin </a>
+            <a class="navbar-item" href="/atcommander.html"> Lệnh AT </a>
             <a class="navbar-item" href="/bandlock.html"> Khóa Band </a>
             <a class="navbar-item" href="/sms.html"> Xem SMS </a>
-            <a class="navbar-item" href="/ttl.html"> TTL Changer </a>
+            <a class="navbar-item" href="/ttl.html"> Đổi TTL </a>
             <a class="navbar-item" href="/speedtest.html"> Speedtest </a>
           </div>
         </div>
@@ -54,7 +54,7 @@
               <div class="container">
                 <!-- Fetches the correct Model Name -->
                 <h1 class="title">
-                  <span x-text="csqData.MODEM_MODEL"></span> Noname 5G
+                  <span x-text="csqData.MODEM_MODEL"></span> <center>Noname 5G</center>
                 </h1>
                 <h2 class="subtitle">
                   Dữ liệu Updated: <span x-text="lastUpdate"></span>
@@ -106,7 +106,7 @@
                     x-text="csqData.TEMP"
                     style="margin-top: 1rem"
                   ></p>
-                  <p class="subtitle">Modem Temperature</p>
+                  <p class="subtitle">Nhiệt Độ</p>
                 </article>
               </div>
             </div>
