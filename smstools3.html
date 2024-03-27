@@ -1,85 +1,63 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Send and Receive SMS</title>
+  <title>Gửi và nhận tin nhắn SMS</title>
 </head>
 <body>
-    <h1>Send and Receive SMS</h1>
-    
-    <h2>Send SMS</h2>
-    <form id="sendSMSForm">
-        <label for="phoneNumber">Phone Number:</label><br>
-        <input type="text" id="phoneNumber" name="phoneNumber" required><br>
-        <label for="message">Message:</label><br>
-        <textarea id="message" name="message" rows="4" cols="50" required></textarea><br>
-        <button type="submit">Send SMS</button>
-    </form>
+  <h1>Gửi tin nhắn SMS</h1>
+  <form action="send.php" method="post">
+    <label for="number">Số điện thoại:</label>
+    <input type="text" id="number" name="number" placeholder="+84xxxxxxxxxx">
+    <br>
+    <label for="message">Tin nhắn:</label>
+    <textarea id="message" name="message"></textarea>
+    <br>
+    <input type="submit" value="Gửi">
+  </form>
 
-    <hr>
+  <h1>Nhận tin nhắn SMS</h1>
+  <ul id="messages"></ul>
 
-    <h2>Received SMS</h2>
-    <div id="receivedSMS"></div>
-
-    <script>
-        // Function to send SMS
-        function sendSMS() {
-            var phoneNumber = document.getElementById('phoneNumber').value;
-            var message = document.getElementById('message').value;
-
-            // AJAX request to send SMS via SMSTools3 adb
-            var xhr = new XMLHttpRequest();
-            xhr.open('POST', '/send_sms', true);
-            xhr.setRequestHeader('Content-Type', 'application/json');
-            xhr.onload = function() {
-                if (xhr.status === 200) {
-                    alert('SMS sent successfully!');
-                } else {
-                    alert('Failed to send SMS.');
-                }
-            };
-            xhr.send(JSON.stringify({ phoneNumber: phoneNumber, message: message }));
+  <script>
+    // Cập nhật danh sách tin nhắn
+    function updateMessages() {
+      var xhr = new XMLHttpRequest();
+      xhr.open("GET", "receive.php", true);
+      xhr.onload = function() {
+        if (xhr.status === 200) {
+          var messages = JSON.parse(xhr.responseText);
+          var ul = document.getElementById("messages");
+          ul.innerHTML = "";
+          for (var i = 0; i < messages.length; i++) {
+            var li = document.createElement("li");
+            li.innerHTML = messages[i].number + ": " + messages[i].message;
+            ul.appendChild(li);
+          }
         }
+      };
+      xhr.send();
+    }
 
-        // Function to fetch received SMS
-        function fetchReceivedSMS() {
-            // AJAX request to fetch received SMS
-            var xhr = new XMLHttpRequest();
-            xhr.open('GET', '/received_sms', true);
-            xhr.onload = function() {
-                if (xhr.status === 200) {
-                    var receivedSMS = JSON.parse(xhr.responseText);
-                    var receivedSMSContainer = document.getElementById('receivedSMS');
-                    receivedSMSContainer.innerHTML = ''; // Clear previous content
-
-                    if (receivedSMS.length > 0) {
-                        receivedSMS.forEach(function(sms) {
-                            receivedSMSContainer.innerHTML += '<p><strong>From:</strong> ' + sms.sender + '</p>';
-                            receivedSMSContainer.innerHTML += '<p><strong>Message:</strong> ' + sms.message + '</p>';
-                            receivedSMSContainer.innerHTML += '<hr>';
-                        });
-                    } else {
-                        receivedSMSContainer.innerHTML = '<p>No received SMS.</p>';
-                    }
-                } else {
-                    alert('Failed to fetch received SMS.');
-                }
-            };
-            xhr.send();
+    // Gửi tin nhắn
+    document.getElementById("send-form").addEventListener("submit", function(e) {
+      e.preventDefault();
+      var number = document.getElementById("number").value;
+      var message = document.getElementById("message").value;
+      var xhr = new XMLHttpRequest();
+      xhr.open("POST", "send.php", true);
+      xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+      xhr.onload = function() {
+        if (xhr.status === 200) {
+          alert("Tin nhắn đã được gửi");
+        } else {
+          alert("Có lỗi khi gửi tin nhắn");
         }
+      };
+      xhr.send("number=" + number + "&message=" + message);
+    });
 
-        // Fetch received SMS when the page loads
-        fetchReceivedSMS();
-
-        // Periodically fetch received SMS (every 5 seconds)
-        setInterval(fetchReceivedSMS, 5000);
-
-        // Submit form to send SMS
-        document.getElementById('sendSMSForm').addEventListener('submit', function(event) {
-            event.preventDefault(); // Prevent form submission
-            sendSMS();
-        });
-    </script>
+    // Cập nhật tin nhắn mỗi 5 giây
+    setInterval(updateMessages, 5000);
+  </script>
 </body>
 </html>
