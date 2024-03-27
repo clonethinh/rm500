@@ -1,63 +1,76 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Gửi và nhận tin nhắn SMS</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Send SMS</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.9.3/css/bulma.min.css">
 </head>
 <body>
-  <h1>Gửi tin nhắn SMS</h1>
-  <form action="send.php" method="post">
-    <label for="number">Số điện thoại:</label>
-    <input type="text" id="number" name="number" placeholder="+84xxxxxxxxxx">
-    <br>
-    <label for="message">Tin nhắn:</label>
-    <textarea id="message" name="message"></textarea>
-    <br>
-    <input type="submit" value="Gửi">
-  </form>
+    <section class="section">
+        <div class="container">
+            <h1 class="title">Send SMS</h1>
+            <div class="columns is-centered">
+                <div class="column is-half">
+                    <div class="field">
+                        <label class="label">Phone Number</label>
+                        <div class="control">
+                            <input class="input" type="text" placeholder="Enter phone number" id="phoneNumber">
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label class="label">Message</label>
+                        <div class="control">
+                            <textarea class="textarea" placeholder="Enter message" id="message"></textarea>
+                        </div>
+                    </div>
+                    <div class="field is-grouped">
+                        <div class="control">
+                            <button class="button is-primary" onclick="sendSMS()">Send SMS</button>
+                        </div>
+                        <div class="control">
+                            <button class="button is-danger" onclick="clearFields()">Clear</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
 
-  <h1>Nhận tin nhắn SMS</h1>
-  <ul id="messages"></ul>
+    <script>
+        function sendSMS() {
+            var phoneNumber = document.getElementById('phoneNumber').value;
+            var message = document.getElementById('message').value;
 
-  <script>
-    // Cập nhật danh sách tin nhắn
-    function updateMessages() {
-      var xhr = new XMLHttpRequest();
-      xhr.open("GET", "receive.php", true);
-      xhr.onload = function() {
-        if (xhr.status === 200) {
-          var messages = JSON.parse(xhr.responseText);
-          var ul = document.getElementById("messages");
-          ul.innerHTML = "";
-          for (var i = 0; i < messages.length; i++) {
-            var li = document.createElement("li");
-            li.innerHTML = messages[i].number + ": " + messages[i].message;
-            ul.appendChild(li);
-          }
+            // Send SMS using SMSTools (replace 'send_sms' with your actual endpoint)
+            fetch('/send_sms', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    phoneNumber: phoneNumber,
+                    message: message
+                })
+            })
+            .then(response => {
+                if (response.ok) {
+                    alert('SMS sent successfully!');
+                    clearFields();
+                } else {
+                    alert('Failed to send SMS.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to send SMS.');
+            });
         }
-      };
-      xhr.send();
-    }
 
-    // Gửi tin nhắn
-    document.getElementById("send-form").addEventListener("submit", function(e) {
-      e.preventDefault();
-      var number = document.getElementById("number").value;
-      var message = document.getElementById("message").value;
-      var xhr = new XMLHttpRequest();
-      xhr.open("POST", "send.php", true);
-      xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-      xhr.onload = function() {
-        if (xhr.status === 200) {
-          alert("Tin nhắn đã được gửi");
-        } else {
-          alert("Có lỗi khi gửi tin nhắn");
+        function clearFields() {
+            document.getElementById('phoneNumber').value = '';
+            document.getElementById('message').value = '';
         }
-      };
-      xhr.send("number=" + number + "&message=" + message);
-    });
-
-    // Cập nhật tin nhắn mỗi 5 giây
-    setInterval(updateMessages, 5000);
-  </script>
+    </script>
 </body>
 </html>
