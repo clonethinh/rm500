@@ -1,0 +1,13 @@
+chmod 777 
+wget -c https://raw.githubusercontent.com/clonethinh/rm500/main/bandlock.html /usrdata/simpleadmin/www/
+
+
+
+cd /usrdata/simpleadmin/www
+wget -c linkgithub
+
+rm -rf index.html
+rm -rf receive.php
+rm -rf send.php
+rm -rf sms.html
+rm -rf bandlock.html
