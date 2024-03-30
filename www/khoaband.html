@@ -43,10 +43,7 @@
           :class="isOpen ? 'is-active' : ''"
         >
           <div class="navbar-start">
-            <a class="navbar-item" href="/"> Connection Info </a>
-            <a class="navbar-item" href="/atcommander.html">
-              Simple Settings
-            </a>
+            
             <a class="navbar-item" href="/"> Thông Tin </a>
             <a class="navbar-item" href="/atcommander.html"> Lệnh AT </a>
             <a class="navbar-item" href="/sms.html"> Xem SMS </a>
@@ -68,7 +65,7 @@
         <div class="column is-8-tablet is-6-desktop card-column">
           <div class="card">
             <header class="card-header">
-              <p class="card-header-title">Band Locking</p>
+              <p class="card-header-title">Khóa Băng Tần</p>
             </header>
             <div class="card-content">
               <!-- Create a drop down -->
@@ -83,7 +80,7 @@
               <input
                 class="input is-primary"
                 type="text"
-                placeholder="Example: 1,3,41"
+                placeholder="Ví dụ: 1,3,41"
                 style="margin-top: 1rem"
                 x-model="bandNumbers"
               />
@@ -94,7 +91,7 @@
                   @click="lockBands()"
                   :disabled="isLocking"
                 >
-                  Lock Bands
+                  Khóa Bands
                 </button>
 
                 <button
@@ -103,7 +100,7 @@
                   @click="restoreBands()"
                   :disabled="isLocking"
                 >
-                  Restore Bands
+                  Phục Hồi Bands
                 </button>
               </div>
             </div>
@@ -118,7 +115,7 @@
         <div class="column is-8-tablet is-6-desktop card-column">
           <div class="card">
             <header class="card-header">
-              <p class="card-header-title">LTE and NR5G Cell Locking</p>
+              <p class="card-header-title">Khóa 4G và 5G chế độ NR5G</p>
             </header>
             <div class="card-content">
               <div style="display: flex; flex-direction: row">
@@ -188,7 +185,7 @@
                   @click="cellLock()"
                   :disabled="isLocking"
                 >
-                  Lock Cell
+                  Khóa Cell
                 </button>
 
                 <button
@@ -197,7 +194,7 @@
                   @click="restoreCell()"
                   :disabled="isLocking"
                 >
-                  Restore Cell
+                  Phục Hồi Cell
                 </button>
               </div>
             </div>
