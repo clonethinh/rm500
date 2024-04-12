@@ -5,7 +5,7 @@ install_simple_admin() {
 	echo -e "\e[1;32mWhat version of Simple Admin do you want to install? This will start a webserver on port 8080\e[0m"
         echo -e "\e[1;32m1) Stable current version, (Main Branch)\e[0m"
 	echo -e "\e[1;31m2) Install Test Build (Development Branch)\e[0m"
-    echo -e "\e[1;31m3) Install Test Build (SimpleAdmin 2)\e[0m"
+	echo -e "\e[1;31m3) Install Test Build (SimpleAdmin 2)\e[0m"
 	echo -e "\e[0;33m4) Return to Main Menu\e[0m"
  	echo -e "\e[1;32mSelect your choice: \e[0m"
         read choice
