@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>NoName5G</title>
+    <!-- <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+      crossorigin="anonymous"
+    /> -->
+    <!-- Import all the bootstrap css files from css folder -->
+    <link rel="stylesheet" href="css/styles.css" />
+    <link rel="stylesheet" href="css/bootstrap.min.css" />
+
+    <!--  Import BootStrap Javascript -->
+    <script src="/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/alpinejs.min.js" defer></script>
+  </head>
+  <body>
+    <main>
+      <div class="container my-4" x-data="initAlpine()" x-init="initAlpine()">
+        <nav class="navbar navbar-expand-lg mt-2">
+          <div class="container-fluid">
+            <a class="navbar-brand" href="/"
+              ><span class="mb-0 h4">NoName5G</span></a
+            >
+            <button
+              class="navbar-toggler"
+              type="button"
+              data-bs-toggle="collapse"
+              data-bs-target="#navbarText"
+              aria-controls="navbarText"
+              aria-expanded="false"
+              aria-label="Toggle navigation"
+            >
+              <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarText">
+              <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item">
+                  <a class="nav-link active" aria-current="page" href="/"
+                    ><td x-text="provider"></td></a
+                  >
+                </li>
+                <li class="nav-item">
+                  <a class="nav-link" href="network.html">Simple Network</a>
+                </li>
+                <li class="nav-item">
+                  <a class="nav-link" href="/settings.html">Simple Settings</a>
+                </li>
+                <li class="nav-item">
+                  <a class="nav-link" href="/sms.html">SMS</a>
+                </li>
+                <li class="nav-item">
+                  <a class="nav-link" href="/deviceinfo.html"
+                    >Device Information</a
+                  >
+                </li>
+              </ul>
+              <span class="navbar-text">
+                <button class="btn btn-link text-reset" id="darkModeToggle">
+                  Dark Mode
+                </button>
+              </span>
+            </div>
+          </div>
+        </nav>
+
+        <div class="row align-items-center mt-5 gap-md-3 gap-2">
+          <div class="col align-self-center">
+            <div class="card">
+              <div
+                class="card-body d-flex flex-column align-items-center justify-content-center"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 320 512"
+                  height="85"
+                  width="85"
+                >
+                  <path
+                    fill="#fdb53c"
+                    d="M160 64c-26.5 0-48 21.5-48 48V276.5c0 17.3-7.1 31.9-15.3 42.5C86.2 332.6 80 349.5 80 368c0 44.2 35.8 80 80 80s80-35.8 80-80c0-18.5-6.2-35.4-16.7-48.9c-8.2-10.6-15.3-25.2-15.3-42.5V112c0-26.5-21.5-48-48-48zM48 112C48 50.2 98.1 0 160 0s112 50.1 112 112V276.5c0 .1 .1 .3 .2 .6c.2 .6 .8 1.6 1.7 2.8c18.9 24.4 30.1 55 30.1 88.1c0 79.5-64.5 144-144 144S16 447.5 16 368c0-33.2 11.2-63.8 30.1-88.1c.9-1.2 1.5-2.2 1.7-2.8c.1-.3 .2-.5 .2-.6V112zM208 368c0 26.5-21.5 48-48 48s-48-21.5-48-48c0-20.9 13.4-38.7 32-45.3V272c0-8.8 7.2-16 16-16s16 7.2 16 16v50.7c18.6 6.6 32 24.4 32 45.3z"
+                  />
+                </svg>
+                <h1
+                  class="card-text mt-4"
+                  x-text="temperature + ' &deg;C'"
+                ></h1>
+              </div>
+              <div class="card-footer">Temperature</div>
+            </div>
+          </div>
+
+          <div class="col align-self-center">
+            <div class="card">
+              <div
+                class="card-body d-flex flex-column align-items-center justify-content-center"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 640 512"
+                  height="85"
+                  width="85"
+                >
+                  <path
+                    fill="#2fa7fb"
+                    d="M576 0c17.7 0 32 14.3 32 32V480c0 17.7-14.3 32-32 32s-32-14.3-32-32V32c0-17.7 14.3-32 32-32zM448 96c17.7 0 32 14.3 32 32V480c0 17.7-14.3 32-32 32s-32-14.3-32-32V128c0-17.7 14.3-32 32-32zM352 224V480c0 17.7-14.3 32-32 32s-32-14.3-32-32V224c0-17.7 14.3-32 32-32s32 14.3 32 32zM192 288c17.7 0 32 14.3 32 32V480c0 17.7-14.3 32-32 32s-32-14.3-32-32V320c0-17.7 14.3-32 32-32zM96 416v64c0 17.7-14.3 32-32 32s-32-14.3-32-32V416c0-17.7 14.3-32 32-32s32 14.3 32 32z"
+                  />
+                </svg>
+                <h1 class="card-text mt-4" x-text="percentage"></h1>
+              </div>
+              <div class="card-footer">Signal %</div>
+            </div>
+          </div>
+
+          <div class="col align-self-center">
+            <div class="card">
+              <div
+                class="card-body d-flex flex-column align-items-center justify-content-center"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 640 512"
+                  height="85"
+                  width="85"
+                >
+                  <path
+                    fill="#20c0ae"
+                    d="M0 336c0 79.5 64.5 144 144 144H512c70.7 0 128-57.3 128-128c0-61.9-44-113.6-102.4-125.4c4.1-10.7 6.4-22.4 6.4-34.6c0-53-43-96-96-96c-19.7 0-38.1 6-53.3 16.2C367 64.2 315.3 32 256 32C167.6 32 96 103.6 96 192c0 2.7 .1 5.4 .2 8.1C40.2 219.8 0 273.2 0 336z"
+                  />
+                </svg>
+                <h1 class="card-text mt-4" x-text="internetConnection"></h1>
+              </div>
+              <div class="card-footer">Internet Connection</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row mt-5 gap-3">
+          <div class="col">
+            <div class="card">
+              <div class="card-header">Network Information</div>
+              <div class="card-body">
+                <div class="card-text table-responsive-sm">
+                  <table class="table">
+                    <tbody>
+                      <tr>
+                        <th scope="row">Active Sim</th>
+                        <td x-text="sim_slot"></td>
+                      </tr>
+                      <tr>
+                        <th scope="row">Network Provider</th>
+                        <td x-text="provider"></td>
+                      </tr>
+                      <tr>
+                        <th scope="row">MCCMNC</th>
+                        <td x-text="mccmnc"></td>
+                      </tr>
+                      <tr>
+                        <th scope="row">APN</th>
+                        <td x-text="apn"></td>
+                      </tr>
+                      <tr>
+                        <th scope="row">Network Mode</th>
+                        <td x-text="network_mode"></td>
+                      </tr>
+                      <tr>
+                        <th scope="row">Bands</th>
+                        <td x-text="bands"></td>
+                      </tr>
+                      <tr>
+                        <th scope="row">Bandwidth</th>
+                        <td x-text="bandwidth"></td>
+                      </tr>
+                      <tr>
+                        <th scope="row">E/ARFCN<sup>4G/5G</sup></th>
+                        <td x-text="earfcns"></td>
+                      </tr>
+                      <tr>
+                        <th scope="row">PCI</th>
+                        <td x-text="pcc_pci + scc_pcis"></td>
+                      </tr>
+                      <tr>
+                        <th scope="row">IPv<sup>4</sup></th>
+                        <td x-text="ipv4"></td>
+                      </tr>
+                      <tr>
+                        <th scope="row">IPv<sup>6</sup></th>
+                        <td x-text="ipv6"></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="card-footer">
+                <div class="row row-cols-2">
+                  <div class="col">
+                    <p class="btn">Refresh Rate (min 3s)</p>
+                  </div>
+                  <div class="col">
+                    <div class="input-group">
+                      <input
+                        id="refreshRateInput"
+                        class="form-control"
+                        type="number"
+                        min="3"
+                        max="60"
+                        placeholder="Stats Refresh Rate"
+                      />
+                      <button
+                        id="setRefreshRateButton"
+                        class="btn btn-outline-secondary"
+                        type="button"
+                      >
+                        Set
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col">
+            <div class="card">
+              <div class="card-header">Signal Information</div>
+              <div class="card-body">
+                <div class="card-text table-responsive-sm">
+                  <table class="table">
+                    <tbody>
+                      <tr>
+                        <th scope="row">Assesment</th>
+                        <td x-text="signalAssessment"></td>
+                      </tr>
+                      <tr>
+                        <th scope="row">CSQ</th>
+                        <td x-text="csq"></td>
+                      </tr>
+                      <tr>
+                        <th scope="row">CELL ID</th>
+                        <td x-text="cidVal"></td>
+                      </tr>
+                      <tr>
+                        <th scope="row">eNB ID <sup>4G/5G</sup></th>
+                        <td x-text="rncVal"></td>
+                      </tr>
+                      <tr>
+                        <th scope="row">TAC<sup>4G/5G</sup></th>
+                        <td x-text="lacVal"></td>
+                      </tr>
+                      <tr>
+                        <th scope="row">RSSI</th>
+                        <td x-text="rssi"></td>
+                      </tr>
+                      <tr>
+                        <th scope="row">SS_RSRQ<sup>4G</sup></th>
+                        <td
+                          class="d-flex gap-4 align-items-center"
+                          x-data="{ getProgressBarClass: function() {
+                          // Remove the percentage sign and convert to integer
+                          var percentage = parseInt(this.rsrqLTEPercentage.replace('%', ''));
+                          
+                          if (percentage >= 60) {
+                              return 'progress-bar bg-success is-medium';
+                          } else if (percentage >= 40) {
+                              return 'progress-bar bg-warning is-warning is-medium';
+                          } else {
+                              return 'progress-bar bg-danger is-medium';
+                          }
+                      } }"
+                        >
+                          <div
+                            x-show="rsrqLTE != '-'"
+                            class="progress w-50"
+                            role="progressbar"
+                            aria-label="RSRQ BAR"
+                            :aria-valuenow="rsrqLTEPercentage"
+                            aria-valuemin="0"
+                            aria-valuemax="100"
+                            style="height: 18px"
+                          >
+                            <div
+                              :class="getProgressBarClass()"
+                              :style="'width: ' + rsrqLTEPercentage"
+                            >
+                              <span x-text="rsrqLTEPercentage"></span>
+                            </div>
+                          </div>
+                          <span x-text="rsrqLTE"></span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <th scope="row">SS_RSRQ<sup>5G</sup></th>
+                        <td
+                        class="d-flex gap-4 align-items-center"
+                          x-data="{ getProgressBarClass: function() {
+                          // Remove the percentage sign and convert to integer
+                          var percentage = parseInt(this.rsrqNRPercentage.replace('%', ''));
+                          
+                          if (percentage >= 60) {
+                              return 'progress-bar bg-success is-medium';
+                          } else if (percentage >= 40) {
+                              return 'progress-bar bg-warning is-warning is-medium';
+                          } else {
+                              return 'progress-bar bg-danger is-medium';
+                          }
+                      } }"
+                        >
+                          <div
+                            x-show="rsrqNR != '-'"
+                            class="progress w-50"
+                            role="progressbar"
+                            aria-label="RSRQ BAR"
+                            :aria-valuenow="rsrqNRPercentage"
+                            aria-valuemin="0"
+                            aria-valuemax="100"
+                            style="height: 18px"
+                          >
+                            <div
+                              :class="getProgressBarClass()"
+                              :style="'width: ' + rsrqNRPercentage"
+                            >
+                              <span x-text="rsrqNRPercentage"></span>
+                            </div>
+                          </div>
+                          <span x-text="rsrqNR"></span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <th scope="row">RSRP<sup>4G</sup></th>
+                        <td
+                        class="d-flex gap-4 align-items-center"
+                          x-data="{
+                          getProgressBarClass: function() {
+                              // Remove the percentage sign and convert to integer
+                              var percentage = parseInt(this.rsrpLTEPercentage.replace('%', ''));
+                              
+                              if (percentage >= 60) {
+                                  return 'progress-bar bg-success is-medium';
+                              } else if (percentage >= 40) {
+                                  return 'progress-bar bg-warning is-warning is-medium';
+                              } else {
+                                  return 'progress-bar bg-danger is-medium';
+                              }
+                          }
+                        }"
+                        >
+                          <div
+                            x-show="rsrpLTE != '-'"
+                            class="progress w-50"
+                            role="progressbar"
+                            aria-label="RSRP BAR"
+                            :aria-valuenow="rsrpLTEPercentage"
+                            aria-valuemin="0"
+                            aria-valuemax="100"
+                            style="height: 18px"
+                          >
+                            <div
+                              :class="getProgressBarClass()"
+                              :style="'width: ' + rsrpLTEPercentage"
+                            >
+                              <span x-text="rsrpLTEPercentage"></span>
+                            </div>
+                          </div>
+                          <span x-text="rsrpLTE"></span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <th scope="row">SS_RSRP<sup>5G</sup></th>
+                        <td
+                        class="d-flex gap-4 align-items-center"
+                          x-data="{
+                          getProgressBarClass: function() {
+                              // Remove the percentage sign and convert to integer
+                              var percentage = parseInt(this.rsrpNRPercentage.replace('%', ''));
+                              
+                              if (percentage >= 60) {
+                                  return 'progress-bar bg-success is-medium';
+                              } else if (percentage >= 40) {
+                                  return 'progress-bar bg-warning is-warning is-medium';
+                              } else {
+                                  return 'progress-bar bg-danger is-medium';
+                              }
+                          }
+                        }"
+                        >
+                          <div
+                            x-show="rsrpNR != '-'"
+                            class="progress w-50"
+                            role="progressbar"
+                            aria-label="RSRP BAR"
+                            :aria-valuenow="rsrpNRPercentage"
+                            aria-valuemin="0"
+                            aria-valuemax="100"
+                            style="height: 18px"
+                          >
+                            <div
+                              :class="getProgressBarClass()"
+                              :style="'width: ' + rsrpNRPercentage"
+                            >
+                              <span x-text="rsrpNRPercentage"></span>
+                            </div>
+                          </div>
+                          <span x-text="rsrpNR"></span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <th scope="row">SINR<sup>4G</sup></th>
+                        <td
+                        class="d-flex gap-4 align-items-center"
+                          x-data="{
+                          getProgressBarClass: function() {
+                              // Remove the percentage sign and convert to integer
+                              var percentage = parseInt(this.sinrLTEPercentage.replace('%', ''));
+                              
+                              if (percentage >= 60) {
+                                  return 'progress-bar bg-success is-medium';
+                              } else if (percentage >= 40) {
+                                  return 'progress-bar bg-warning is-warning is-medium';
+                              } else {
+                                  return 'progress-bar bg-danger is-medium';
+                              }
+                          }
+                        }"
+                        >
+                          <div
+                            x-show="sinrLTE != '-'"
+                            class="progress w-50"
+                            role="progressbar"
+                            aria-label="SINR BAR"
+                            :aria-valuenow="sinrLTEPercentage"
+                            aria-valuemin="0"
+                            aria-valuemax="100"
+                            style="height: 18px"
+                          >
+                            <div
+                              :class="getProgressBarClass()"
+                              :style="'width: ' + sinrLTEPercentage"
+                            >
+                              <span x-text="sinrLTEPercentage"></span>
+                            </div>
+                          </div>
+                          <span x-text="sinrLTE"></span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <th scope="row">SINR<sup>5G</sup></th>
+                        <td
+                          class="d-flex gap-4 align-items-center"
+                          x-data="{
+                          getProgressBarClass: function() {
+                              // Remove the percentage sign and convert to integer
+                              var percentage = parseInt(this.sinrNRPercentage.replace('%', ''));
+                              
+                              if (percentage >= 60) {
+                                  return 'progress-bar bg-success is-medium';
+                              } else if (percentage >= 40) {
+                                  return 'progress-bar bg-warning is-warning is-medium';
+                              } else {
+                                  return 'progress-bar bg-danger is-medium';
+                              }
+                          }
+                        }"
+                        >
+                          <div
+                            x-show="sinrNR != '-'"
+                            class="progress w-50"
+                            role="progressbar"
+                            aria-label="SINR BAR"
+                            :aria-valuenow="sinrNRPercentage"
+                            aria-valuemin="0"
+                            aria-valuemax="100"
+                            style="height: 18px"
+                          >
+                            <div
+                              :class="getProgressBarClass()"
+                              :style="'width: ' + sinrNRPercentage"
+                            >
+                              <span x-text="sinrNRPercentage"></span>
+                            </div>
+                          </div>
+                          <span x-text="sinrNR"></span>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="card-footer">
+                <div class="card-text">
+                  <div class="row">
+                    <div class="col">
+                      <div>
+                        <p>Date Updated</p>
+                      </div>
+                    </div>
+
+                    <div class="col">
+                      <p x-text="lastUpdate"></p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+    <script src="/js/dark-mode.js"></script>
+    <script src="/js/extract-bw.js"></script>
+    <script>
+      function requestATInfo(atcmd) {
+        return fetch(
+          "/cgi-bin/get_atcommand?" +
+            new URLSearchParams({
+              atcmd: atcmd,
+            })
+        )
+          .then((response) => response.text())
+          .then((data) => {
+            return data;
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            // Throw the error again to ensure it's propagated
+            throw error;
+          });
+      }
+
+      function requestPing() {
+        return fetch("/cgi-bin/get_ping")
+          .then((response) => response.text())
+          .then((data) => {
+            return data;
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            // Throw the error again to ensure it's propagated
+            throw error;
+          });
+      }
+
+      function fetchATInfo() {
+        const atcmd =
+          'AT+QTEMP;+QUIMSLOT?;+QSPN;+CGCONTRDP=1;+QCAINFO;+QENG="servingcell";+QMAP="WWAN";+CSQ;+CEREG=2;+CEREG?;+CEREG=0;+C5GREG=2;+C5GREG?;+C5GREG=0;';
+        return requestATInfo(atcmd)
+          .then((rawData) => {
+            // Define regular expressions and other processing logic
+            const parsedData = processData(rawData);
+            // Return the parsed data
+            return {
+              temperature: parsedData.parsed_temperature,
+              sim_slot: parsedData.sim_slot,
+              mccmnc: parsedData.mccmnc,
+              provider: parsedData.provider,
+              apn: parsedData.apn,
+              bands: parsedData.bands,
+              earfcns: parsedData.earfcns,
+              pcc_pci: parsedData.pcc_pci,
+              scc_pcis: parsedData.scc_pcis,
+              network_mode: parsedData.network_mode,
+              ipv4: parsedData.ipv4,
+              ipv6: parsedData.ipv6,
+              csq: parsedData.csq,
+              bandwidth: parsedData.bandwidth,
+              lacVal: parsedData.lacVal,
+              rncVal: parsedData.rncVal,
+              cidVal: parsedData.cidVal,
+              rssi: parsedData.rssi,
+              rsrqLTE: parsedData.rsrqLTE,
+              rsrqLTEPercentage: parsedData.rsrqLTEPercentage,
+              rsrqNR: parsedData.rsrqNR,
+              rsrqNRPercentage: parsedData.rsrqNRPercentage,
+              rsrpLTE: parsedData.rsrpLTE,
+              rsrpLTEPercentage: parsedData.rsrpLTEPercentage,
+              rsrpNR: parsedData.rsrpNR,
+              rsrpNRPercentage: parsedData.rsrpNRPercentage,
+              sinrLTE: parsedData.sinrLTE,
+              sinrLTEPercentage: parsedData.sinrLTEPercentage,
+              sinrNR: parsedData.sinrNR,
+              sinrNRPercentage: parsedData.sinrNRPercentage,
+              percentage: parsedData.percentage,
+              signalAssessment: parsedData.signalAssessment,
+            };
+          })
+          .catch((error) => {
+            // Return a default object or handle the error as needed
+            console.error("Error:", error);
+          });
+      }
+
+      function processData(rawData) {
+        // Define regular expressions
+        const regexes = {
+          temperature: /\+QTEMP:"[^\"]+","(\d{1,3})"/,
+          simSlot: /\+QUIMSLOT: (\d)/,
+          provider1: /\+QSPN:\s*"([^"]+)"/,
+          provider2: /\+QSPN: "[^"]+","[^"]+","([^"]+)"/,
+          mccmnc: /\+QSPN:.*?,"(\d+)"/,
+          apn: /\+CGCONTRDP: \d,\d,"([^"]+)"/,
+          bands:
+            /\+QCAINFO: "(?:PCC|SCC)",\d+,\d+,"(NR5G BAND \d+|LTE BAND \d+)"/g,
+          earfcns: /\+QCAINFO: "(?:PCC|SCC)",(\d+),\d+,/g,
+          ipv4: /\+QMAP: "WWAN",1,1,"IPV4","([\d.]+)"/,
+          ipv6: /\+QMAP: "WWAN",1,1,"IPV6","([:\da-fA-F]+)"/,
+          enb5G: /\+C5GREG: \d,\d,"(\d+)","[\da-fA-F]+",/, // Regex to capture eNB
+          tac5G: /\+C5GREG: \d,\d,"[\d]+","([\da-fA-F]+)",/,
+          rssi: /\+QENG:.*,-(\d+),/,
+          enblte: /\+CEREG: \d,\d,"([\da-fA-F]+)","[\da-fA-F]+",\d+/,
+          taclte: /\+CEREG: \d,\d,"[\da-fA-F]+","([\da-fA-F]+)",\d+/,
+        };
+
+        // Function to extract information using regex
+        function extractInformation(data, regex) {
+          const match = data.match(regex);
+          return match ? match.slice(1) : null;
+        }
+
+        let lacVal, rncVal, cidVal, provider;
+
+        // Parse data using defined regexes
+        let {
+          bw,
+          networkMode,
+          pcc_pci,
+          csq,
+          rssi,
+          rsrqLTE,
+          rsrqLTEPercentage,
+          rsrqNR,
+          rsrqNRPercentage,
+          rsrpLTE,
+          rsrpLTEPercentage,
+          rsrpNR,
+          rsrpNRPercentage,
+          sinrLTE,
+          sinrLTEPercentage,
+          sinrNR,
+          sinrNRPercentage,
+          percentage,
+          signalAssessment,
+        } = extractBandwidths(rawData);
+
+        const temperature = extractInformation(rawData, regexes.temperature);
+        const simSlot = extractInformation(rawData, regexes.simSlot);
+        const mccmnc = extractInformation(rawData, regexes.mccmnc);
+        const apn = extractInformation(rawData, regexes.apn);
+        let provider1 = extractInformation(rawData, regexes.provider1);
+        // Remove all spaces from provider1
+        provider1 = provider1[0].replace(/\s/g, "");
+        const provider2 = extractInformation(rawData, regexes.provider2);
+
+        // Check if provider1 has a letter
+        if (provider1[0].match(/[a-z]/i)) {
+          provider = provider1;
+        } else {
+          provider = provider2;
+        }
+
+        if (networkMode === "NR5G-SA") {
+          const enb5G = extractInformation(rawData, regexes.enb5G);
+          const tac5G = extractInformation(rawData, regexes.tac5G);
+          const tacValue = tac5G[0].toString();
+          const enbValue = enb5G[0].toString();
+
+          // for CID5, LAC5 and RNC5
+          const lac5 = parseInt(enb5G, 16); // Convert eNB to decimal
+          // Get the first 6 characters of TAC
+          const rnc5 = parseInt(tacValue.substring(0, 6), 16); // Convert TAC to decimal
+          // Convert to hexadecimal
+          const shortCID5 = parseInt(tacValue.substring(6, 9), 16); // Extract short CID from TAC and convert to decimal
+          const longCID5 = parseInt(tacValue, 16); // Convert TAC to decimal
+
+          // Format the results
+          lacVal = `${enb5G} (${lac5})`;
+          rncVal = `${tacValue.substring(0, 6)} (${rnc5})`;
+          cidVal =
+            `Short ${tacValue.substring(6, 9).toUpperCase()} (${shortCID5}), ` +
+            `Long ${tacValue.toUpperCase()} (${longCID5})`;
+        } else {
+          const enblte = extractInformation(rawData, regexes.enblte);
+          const taclte = extractInformation(rawData, regexes.taclte);
+          const tacValue = taclte[0].toString();
+          const enbValue = enblte[0].toString();
+
+          // for CID, LAC and RNC
+          const lac = parseInt(enblte, 16); // Convert eNB to decimal
+          // Get the first 5 characters of TAC
+          const rnc = parseInt(tacValue.substring(0, 5), 16); // Convert TAC to decimal
+          // Convert to hexadecimal
+          const shortCID = parseInt(tacValue.substring(5, 8), 16); // Extract short CID from TAC and convert to decimal
+          const longCID = parseInt(tacValue, 16); // Convert TAC to decimal
+
+          // Format the results
+          lacVal = `${enblte} (${lac})`;
+          rncVal = `${tacValue.substring(0, 5)} (${rnc})`;
+          cidVal =
+            `Short ${tacValue.substring(5, 8).toUpperCase()} (${shortCID}), ` +
+            `Long ${tacValue.toUpperCase()} (${longCID})`;
+        }
+
+        const bands = Array.from(
+          rawData.matchAll(regexes.bands),
+          (match) => match[1]
+        );
+        const earfcns = Array.from(
+          rawData.matchAll(regexes.earfcns),
+          (match) => match[1]
+        );
+
+        // Extract IPv4 and IPv6 addresses
+        const ipv4_match = rawData.match(regexes.ipv4);
+        const ipv4 = ipv4_match ? ipv4_match[1] : "-";
+
+        const ipv6_match = rawData.match(regexes.ipv6);
+        const ipv6 = ipv6_match ? ipv6_match[1] : "-";
+
+        // Extract SCC PCIs
+        let scc_pcis = [];
+        const lines = rawData.split("\n");
+        lines.forEach((line) => {
+          if (line.includes('+QCAINFO: "SCC"')) {
+            if (networkMode === "LTE") {
+              const parts = line.split(",");
+              const pci = parts[5];
+              scc_pcis.push(pci);
+            } else if (networkMode === "NR5G-NSA") {
+              // get pcc_pci values and store it in array
+              const pcc_pci_parts = pcc_pci.split(", ");
+              // Change pcc_pci value to pcc_pci_parts first value
+              pcc_pci = pcc_pci_parts[0] + ", ";
+              scc_pcis = pcc_pci_parts.slice(1);
+            } else if (networkMode === "NR5G-SA") {
+              const parts = line.split(",");
+              const pci = parts[5];
+              scc_pcis.push(pci);
+            }
+          }
+        });
+
+        const parsedData = {
+          parsed_temperature: temperature ? temperature[0] : "-",
+          sim_slot: simSlot ? simSlot[0] : "-",
+          mccmnc: mccmnc ? mccmnc[0] : "-",
+          provider: provider,
+          apn: apn ? apn[0] : "-",
+          bands: bands.length ? bands.join(", ") : "-",
+          earfcns: earfcns.length ? earfcns.join(", ") : "-",
+          pcc_pci: pcc_pci,
+          scc_pcis: scc_pcis.length ? scc_pcis.join(", ") : " ",
+          network_mode: networkMode,
+          ipv4: ipv4 ? ipv4 : "-",
+          ipv6: ipv6 ? ipv6 : "Not available",
+          bandwidth: bw ? bw : "-",
+          csq: csq ? csq : "-",
+          lacVal: lacVal ? lacVal : "-",
+          rncVal: rncVal ? rncVal : "-",
+          cidVal: cidVal ? cidVal : "-",
+          rssi: rssi ? rssi : "-",
+          rsrqLTE: rsrqLTE ? rsrqLTE : "-",
+          rsrqLTEPercentage: rsrqLTEPercentage ? rsrqLTEPercentage : "-",
+          rsrqNR: rsrqNR ? rsrqNR : "-",
+          rsrqNRPercentage: rsrqNRPercentage ? rsrqNRPercentage : "-",
+          rsrpLTE: rsrpLTE ? rsrpLTE : "-",
+          rsrpLTEPercentage: rsrpLTEPercentage ? rsrpLTEPercentage : "-",
+          rsrpNR: rsrpNR ? rsrpNR : "-",
+          rsrpNRPercentage: rsrpNRPercentage ? rsrpNRPercentage : "-",
+          sinrLTE: sinrLTE ? sinrLTE : "-",
+          sinrLTEPercentage: sinrLTEPercentage ? sinrLTEPercentage : "-",
+          sinrNR: sinrNR ? sinrNR : "-",
+          sinrNRPercentage: sinrNRPercentage ? sinrNRPercentage : "-",
+          percentage: percentage ? percentage : "-",
+          signalAssessment: signalAssessment ? signalAssessment : "-",
+        };
+        return parsedData;
+      }
+
+      function initAlpine() {
+        return {
+          temperature: "-",
+          sim_slot: "-",
+          mccmnc: "-",
+          provider: "-",
+          apn: "-",
+          bands: "-",
+          earfcns: "-",
+          pcc_pci: "-",
+          scc_pcis: "-",
+          network_mode: "-",
+          ipv4: "-",
+          ipv6: "Not available",
+          csq: "-",
+          bandwidth: "-",
+          lacVal: "-",
+          rncVal: "-",
+          cidVal: "-",
+          rssi: "-",
+          rsrqLTE: "-",
+          rsrqLTEPercentage: "-",
+          rsrqNR: "-",
+          rsrqNRPercentage: "-",
+          rsrpLTE: "-",
+          rsrpLTEPercentage: "-",
+          rsrpNR: "-",
+          rsrpNRPercentage: "-",
+          sinrLTE: "-",
+          sinrLTEPercentage: "-",
+          sinrNR: "-",
+          sinrNRPercentage: "-",
+          percentage: "-",
+          internetConnection: "Disconnected",
+          signalAssessment: "-",
+          lastUpdate: new Date().toLocaleString(),
+          refreshInterval: 30000, // Default refresh interval
+
+          init() {
+            let refreshIntervalId; // Declare refreshIntervalId using let
+
+            // Retrieve the refresh rate from local storage if available
+            const storedRefreshRate = localStorage.getItem("refreshRate");
+            if (storedRefreshRate) {
+              this.refreshInterval = parseInt(storedRefreshRate);
+            }
+
+            // Set the input field value to the current refresh rate
+            document.getElementById("refreshRateInput").value =
+              this.refreshInterval / 1000;
+
+            const fetchDataAndUpdate = () => {
+              fetchATInfo().then((data) => {
+                this.temperature = data.temperature;
+                this.sim_slot = data.sim_slot;
+                this.mccmnc = data.mccmnc;
+                this.provider = data.provider;
+                this.apn = data.apn;
+                this.bands = data.bands;
+                this.earfcns = data.earfcns;
+                this.pcc_pci = data.pcc_pci;
+                this.scc_pcis = data.scc_pcis;
+                this.network_mode = data.network_mode;
+                this.ipv4 = data.ipv4;
+                this.ipv6 = data.ipv6;
+                this.csq = data.csq;
+                this.bandwidth = data.bandwidth;
+                this.lacVal = data.lacVal;
+                this.rncVal = data.rncVal;
+                this.cidVal = data.cidVal;
+                this.rssi = data.rssi;
+                this.rsrqLTE = data.rsrqLTE;
+                this.rsrqLTEPercentage = data.rsrqLTEPercentage;
+                this.rsrqNR = data.rsrqNR;
+                this.rsrqNRPercentage = data.rsrqNRPercentage;
+                this.rsrpLTE = data.rsrpLTE;
+                this.rsrpLTEPercentage = data.rsrpLTEPercentage;
+                this.rsrpNR = data.rsrpNR;
+                this.rsrpNRPercentage = data.rsrpNRPercentage;
+                this.sinrLTE = data.sinrLTE;
+                this.sinrLTEPercentage = data.sinrLTEPercentage;
+                this.sinrNR = data.sinrNR;
+                this.sinrNRPercentage = data.sinrNRPercentage;
+                this.percentage = data.percentage;
+                this.signalAssessment = data.signalAssessment;
+                this.lastUpdate = new Date().toLocaleString();
+              });
+            };
+
+            requestPing()
+              .then((data) => {
+                const response = data.trim(); // Trim any leading/trailing spaces
+                if (response === "OK") {
+                  this.internetConnection = "Connected";
+                } else {
+                  this.internetConnection = "Disconnected";
+                }
+              })
+              .catch((error) => {
+                console.error("Error:", error);
+                this.internetConnection = "Disconnected";
+              });
+
+            fetchDataAndUpdate();
+
+            const refreshData = () => {
+              console.log("Fetching AT commands...");
+              fetchDataAndUpdate();
+
+              // Call the ping request to check the internet connection
+              requestPing()
+                .then((data) => {
+                  const response = data.trim(); // Trim any leading/trailing spaces
+                  console.log("Ping response again:", response);
+                  if (response === "OK") {
+                    this.internetConnection = "Connected";
+                  } else {
+                    this.internetConnection = "Disconnected";
+                  }
+                })
+                .catch((error) => {
+                  console.error("Error:", error);
+                  this.internetConnection = "Disconnected";
+                });
+              console.log("AT commands fetched.");
+            };
+
+            refreshIntervalId = setInterval(refreshData, this.refreshInterval);
+
+            document
+              .getElementById("setRefreshRateButton")
+              .addEventListener("click", () => {
+                const newRefreshRate =
+                  parseInt(document.getElementById("refreshRateInput").value) *
+                  1000;
+                if (!isNaN(newRefreshRate)) {
+                  clearInterval(refreshIntervalId); // Clear the previous interval
+                  this.refreshInterval = newRefreshRate;
+                  refreshIntervalId = setInterval(
+                    refreshData,
+                    this.refreshInterval
+                  ); // Update refreshIntervalId with new interval
+                  console.log(
+                    `Refresh interval set to ${this.refreshInterval} milliseconds.`
+                  );
+                  // Store the new refresh rate in local storage
+                  localStorage.setItem("refreshRate", this.refreshInterval);
+                } else {
+                  console.log(
+                    "Please enter a valid number for the refresh rate."
+                  );
+                }
+              });
+          },
+        };
+      }
+    </script>
+  </body>
+</html>
