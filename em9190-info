@@ -38,7 +38,7 @@ sanitize_string() {
 
 # Làm sạch số: thay thế chuỗi rỗng bằng "-"
 sanitize_number() {
-    echo "$1" | grep -qE '^[0-9]+$' && echo "$1" || echo "0"
+    [ -z "$1" ] && echo "-" || echo "$1"
 }
 
 # ==== INTERFACE VÀ IP WAN ====
