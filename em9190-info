@@ -1,0 +1,581 @@
+#!/bin/sh
+exec 2>/dev/null
+echo "Content-Type: application/json"
+echo ""
+
+DEVICE="/dev/ttyUSB0"
+
+# ==== HÀM PHỤ ====
+
+# Lấy một dòng phản hồi từ lệnh AT, lọc theo chuỗi và lấy dòng cuối
+get_at_response() {
+    CMD="$1"
+    FILTER="$2"
+    sms_tool -d "$DEVICE" at "$CMD" > /tmp/at_resp.txt 2>/dev/null
+    grep "$FILTER" /tmp/at_resp.txt | tail -1
+}
+
+# Lấy một giá trị duy nhất từ kết quả lệnh AT, loại bỏ các dòng không cần thiết
+get_single_line_value() {
+    CMD="$1"
+    sms_tool -d "$DEVICE" at "$CMD" 2>/dev/null | grep -vE '^(AT|\s*OK|\s*$)' | head -1 | tr -d '\r\n '
+}
+
+# Lấy IMSI của SIM
+get_imsi() {
+    get_single_line_value "AT+CIMI"
+}
+
+# Lấy ICCID của SIM
+get_iccid() {
+    sms_tool -d "$DEVICE" at "AT+ICCID" 2>/dev/null | grep -i "ICCID" | awk -F: '{print $2}' | tr -d '\r\n "'
+}
+
+# Làm sạch chuỗi: thay thế chuỗi rỗng bằng "-" và xóa ký tự xuống dòng
+sanitize_string() {
+    [ -z "$1" ] && echo "-" || echo "$1" | tr -d '\r\n'
+}
+
+# Làm sạch số: thay thế chuỗi rỗng bằng "-"
+sanitize_number() {
+    echo "$1" | grep -qE '^[0-9]+$' && echo "$1" || echo "0"
+}
+
+# ==== INTERFACE VÀ IP WAN ====
+# Phát hiện tên interface mạng đang hoạt động (wwan0, eth2, usb0, 5G, hoặc interface có default route)
+detect_interface() {
+    if ifconfig wwan0 2>/dev/null | grep -q "inet "; then
+        echo "wwan0"
+    elif ifconfig br-lan 2>/dev/null | grep -q "inet "; then
+        echo "br-lan"
+    else
+        for iface in eth2 usb0 5G; do
+            if ifconfig "$iface" 2>/dev/null | grep -q "inet "; then
+                echo "$iface"
+                return
+            fi
+        done
+        ip route | awk '/default/ {print $5}' | head -1
+    fi
+}
+
+
+
+# Lấy địa chỉ IP WAN của interface được chỉ định, ưu tiên ubus, sau đó ifconfig, ip addr
+get_wan_ip() {
+    local iface="$1"
+    local ip=""
+    local IFACE_FROM_UBUS="" # Biến để lưu tên interface từ ubus
+
+    # Cố gắng lấy tên interface từ ubus thông qua /tmp/network/active hoặc biến môi trường
+    if [ -f "/tmp/network/active" ]; then
+        IFACE_FROM_UBUS=$(cat "/tmp/network/active")
+    elif [ -n "$IFACE" ]; then # Fallback nếu không có /tmp/network/active
+        IFACE_FROM_UBUS="$IFACE"
+    fi
+
+    # Ưu tiên lấy IP từ ubus nếu IFACE_FROM_UBUS hợp lệ
+    if [ -n "$IFACE_FROM_UBUS" ]; then
+        ip=$(ubus call network.interface."$IFACE_FROM_UBUS" status 2>/dev/null | jsonfilter -e '@["ipv4-address"][0].address')
+    fi
+    
+    # Nếu ubus không trả về IP, thử ifconfig
+    if [ -z "$ip" ] && [ -n "$iface" ]; then
+        ip=$(ifconfig "$iface" 2>/dev/null | awk '/inet / {print $2}' | cut -d: -f2)
+    fi
+    
+    # Nếu ifconfig cũng không có, thử ip addr
+    if [ -z "$ip" ] && [ -n "$iface" ]; then
+        ip=$(ip addr show "$iface" 2>/dev/null | awk '/inet / {print $2}' | cut -d/ -f1)
+    fi
+    
+    # Xác thực định dạng IP (phải là IPv4 hợp lệ và không phải là địa chỉ APIPA/0.0.0.0)
+    if echo "$ip" | grep -qE '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$' && \
+       ! echo "$ip" | grep -qE '^(0\.0\.0\.0|169\.254)'; then
+        echo "$ip"
+    else
+        echo "-" # Trả về "-" nếu không tìm thấy IP hợp lệ
+    fi
+}
+
+# Lấy APN hiện tại: Ưu tiên lấy APN từ section '5G' trong /etc/config/network
+get_current_apn() {
+    echo "DEBUG_APN: Starting get_current_apn()" >> /tmp/apn_debug.log
+    local apn_from_config="-"
+
+    # Kiểm tra xem uci có tồn tại không và có tệp cấu hình không
+    if ! command -v uci >/dev/null 2>&1 || [ ! -f /etc/config/network ]; then
+        echo "DEBUG_APN: uci command not found or config file missing." >> /tmp/apn_debug.log
+        echo "auto" # Trả về auto nếu không tìm thấy uci hoặc tệp config
+        return
+    fi
+    
+    # Lấy APN trực tiếp từ section '5G'
+    # Vì chúng ta biết cấu trúc là network.5G.apn
+    local section_name="5G"
+    local current_apn=$(uci get network."$section_name".apn 2>/dev/null)
+    
+    echo "DEBUG_APN: Attempted to get APN from section '$section_name'." >> /tmp/apn_debug.log
+    echo "DEBUG_APN: Retrieved APN value: '$current_apn'." >> /tmp/apn_debug.log
+
+    # Trả về APN đã tìm thấy hoặc mặc định là "auto"
+    if [ -n "$current_apn" ] && [ "$current_apn" != "-" ]; then
+        echo "$current_apn"
+    else
+        echo "auto" # Mặc định là "auto" nếu không lấy được APN
+    fi
+}
+
+# Lấy danh sách máy chủ DNS, ưu tiên từ resolv.conf.auto hoặc ubus
+get_dns_servers() {
+    local dns_list=""
+    
+    if [ -f /tmp/resolv.conf.auto ]; then # Ưu tiên từ file cấu hình DNS
+        dns_list=$(awk '/nameserver/ {print $2}' /tmp/resolv.conf.auto | tr '\n' ',' | sed 's/,$//')
+    fi
+    
+    # Nếu chưa có DNS và có tên interface từ ubus
+    if [ -z "$dns_list" ] && [ -n "$IFNAME" ]; then
+        dns_list=$(ubus call network.interface."$IFNAME" status 2>/dev/null | jsonfilter -e '@["dns-server"][*]' | tr '\n' ',' | sed 's/,$//')
+    fi
+    echo "${dns_list:--}" # Trả về "-" nếu không có DNS nào
+}
+
+# Dịch Mã Quốc Gia (MCC) sang tên quốc gia
+get_country_from_mcc() {
+    case "$1" in
+        452) echo "Việt Nam" ;;
+        310) echo "USA" ;;
+        262) echo "Germany" ;;
+        *) echo "-" ;; # Không xác định
+    esac
+}
+
+# Hàm trợ giúp định dạng tốc độ từ bytes sang KB/s hoặc MB/s
+format_speed() {
+    local bytes=$1
+    if [ "$bytes" -eq 0 ]; then # Nếu số byte là 0, trả về "-"
+        echo "-"
+        return
+    fi
+    
+    local speed_kbps=$(awk "BEGIN { printf \"%.2f\", $bytes / 1024 }") # Tốc độ KB/s
+    local speed_mbps=$(awk "BEGIN { printf \"%.2f\", $bytes / 1024 / 1024 }") # Tốc độ MB/s
+
+    # Sử dụng awk để so sánh số thực, kiểm tra xem có lớn hơn 0.01 không để tránh hiển thị 0.00 MB/s
+    if awk "BEGIN { exit !($speed_mbps > 0.01) }"; then 
+        printf "%.2f MB/s" "$speed_mbps"
+    elif awk "BEGIN { exit !($speed_kbps > 0.01) }"; then
+        printf "%.2f KB/s" "$speed_kbps"
+    else # Nếu nhỏ hơn cả KB/s
+        printf "%d B/s" $bytes
+    fi
+}
+
+# ==== Biến cho Tốc Độ Rx/Tx ====
+# Các tệp tạm để lưu trữ trạng thái mẫu Rx/Tx và thời gian
+LAST_RX_BYTES_FILE="/tmp/em9190_last_rx_bytes"
+LAST_TX_BYTES_FILE="/tmp/em9190_last_tx_bytes"
+LAST_SAMPLE_TIME_FILE="/tmp/em9190_last_sample_time"
+
+# Hàm lấy giá trị từ tệp, an toàn với tệp rỗng hoặc không tồn tại
+get_safe_value() {
+    local file="$1"
+    local default_value="$2"
+    if [ -f "$file" ] && [ -s "$file" ]; then # Kiểm tra tệp tồn tại và có nội dung
+        cat "$file"
+    else
+        echo "$default_value" # Trả về giá trị mặc định nếu không
+    fi
+}
+
+# ==== THỰC HIỆN CHÍNH ====
+
+IFACE=$(detect_interface) # Xác định interface mạng chính
+IP_WAN=$(get_wan_ip "$IFACE") # Lấy địa chỉ IP WAN
+CURRENT_APN=$(get_current_apn) # Lấy APN hiện tại
+DNS_SERVERS=$(get_dns_servers) # Lấy máy chủ DNS
+
+# Lấy thông tin trạng thái tổng quan từ modem
+O=$(sms_tool -d "$DEVICE" at "AT!GSTATUS?" 2>/dev/null)
+
+# ==== THÔNG TIN MODEM ====
+MODEL=$(sms_tool -d "$DEVICE" at "AT+CGMM" 2>/dev/null | grep -v -e '^AT' -e '^OK' -e '^$' | head -n1 | tr -d '\r\n')
+FW=$(sms_tool -d "$DEVICE" at "AT+CGMR" 2>/dev/null | grep -v -e '^AT' -e '^OK' -e '^$' | head -n1 | awk '{print $1}')
+IMEI=$(sanitize_string "$(get_single_line_value 'AT+CGSN')") # Lấy IMEI
+IMSI=$(sanitize_string "$(get_imsi)") # Lấy IMSI
+ICCID=$(sanitize_string "$(get_iccid)") # Lấy ICCID
+
+# ==== NHIỆT ĐỘ, CHẾ ĐỘ MẠNG ====
+TEMP=$(echo "$O" | awk -F: '/Temperature:/ {print $3}' | xargs) # Nhiệt độ
+SYS_MODE=$(echo "$O" | awk '/^System mode:/ {print $3}') # Chế độ hệ thống (LTE, ENDC, ...)
+case "$SYS_MODE" in
+    "LTE") MODE="LTE" ;;
+    "ENDC") MODE="5G NSA" ;; # ENDC là 5G Non-Standalone
+    *) MODE="-" ;; # Các chế độ khác
+esac
+
+# ==== TAC, CID, LAC, PCI ====
+# Lấy TAC (Tracking Area Code)
+TAC_HEX=$(echo "$O" | grep -oE 'TAC:[[:space:]]+[0-9a-fA-F]+' | head -1 | sed -E 's/TAC:[[:space:]]+//' | tr -d '\r\n\t ')
+if echo "$TAC_HEX" | grep -qE '^[0-9a-fA-F]+$'; then # Kiểm tra xem có phải là hex hợp lệ không
+    TAC_DEC=$(printf "%d" "0x$TAC_HEX" 2>/dev/null) # Chuyển đổi sang thập phân
+else
+    TAC_HEX="-" # Nếu không hợp lệ, đặt là "-"
+    TAC_DEC="-"
+fi
+
+# Lấy CID (Cell ID) và LAC (Location Area Code)
+CID_HEX=$(echo "$O" | awk '/.*TAC:/ {gsub(/[()]/, "", $7); print $7}' | tr -d '\r\n ')
+if [ -n "$CID_HEX" ]; then
+    CID_DEC=$(printf "%d" "0x$CID_HEX" 2>/dev/null || echo "-") # Chuyển đổi CID từ hex sang thập phân
+else
+    CID_DEC="-"
+    CID_HEX="-"
+fi
+
+PCI=$(echo "$O" | awk '/.*TAC:/ {print $8}' | sed 's/[,)]//g' | tr -d '\r\n ') # Lấy PCI (Physical Cell Identifier)
+[ -z "$PCI" ] && PCI="-" # Đảm bảo PCI không rỗng
+
+# ==== CHỈ SỐ CƯỜNG ĐỘ TÍN HIỆU ====
+RSRP=$(echo "$O" | awk '/^PCC/ && /RSRP/ {print $8}' | head -1 | xargs) # RSRP (Reference Signal Received Power)
+RSSI=$(echo "$O" | awk '/^PCC/ && /RSSI/ {print $4}' | head -1 | xargs) # RSSI (Received Signal Strength Indicator)
+RSRQ=$(echo "$O" | grep "^RSRQ" | awk '{print $3}') # RSRQ (Reference Signal Received Quality)
+SINR=$(echo "$O" | grep "^SINR" | awk '{print $3}') # SINR (Signal to Interference + Noise Ratio)
+[ -z "$RSRQ" ] && RSRQ="-" # Đảm bảo RSRQ không rỗng
+[ -z "$SINR" ] && SINR="-" # Đảm bảo SINR không rỗng
+
+# ==== THÔNG TIN BAND TẦN ====
+BAND=$(echo "$O" | awk '/^LTE band:/ {print $3}') # Lấy băng tần chính LTE
+FREQ=$(echo "$O" | awk '/^LTE band:/ {print $6}') # Lấy tần số tương ứng
+PBAND="B${BAND/B/} @${FREQ} MHz" # Định dạng cho Primary Band
+MODE="$MODE B${BAND/B/}" # Cập nhật biến MODE để bao gồm băng tần chính
+
+# Hàm trợ giúp lấy chuỗi band tần với tần số (ví dụ: B3 @1800 MHz)
+get_band_string() {
+    echo -n "B$1" # In số band
+    case "$1" in
+        "1") echo -n " (2100 MHz)";;
+        "3") echo -n " (1800 MHz)";;
+        "7") echo -n " (2600 MHz)";;
+        "8") echo -n " (900 MHz)";;
+        "20") echo -n " (800 MHz)";;
+        "28") echo -n " (700 MHz)";;
+        "40") echo -n " (2300 MHz)";;
+        *) echo -n "";; # Không có thông tin tần số cho các band khác
+    esac
+}
+
+# Hàm lấy thông tin Secondary Component Carrier (SCC)
+get_scc_band() {
+    local SCC_NO="$1" # Số hiệu SCC (1, 2, 3)
+    # Kiểm tra xem SCC có trạng thái ACTIVE không
+    local ACTIVE=$(echo "$O" | awk -F: "/^LTE SCC${SCC_NO} state:.*ACTIVE/ {print \$3}")
+    if [ -n "$ACTIVE" ]; then # Nếu SCC đang hoạt động
+        local BW=$(echo "$O" | awk "/^LTE SCC${SCC_NO} bw/ {print \$5}") # Lấy băng thông
+        local BSTR="B${ACTIVE/B/}" # Lấy số band chính
+        MODE="${MODE/LTE/LTE-A} + $BSTR" # Cập nhật MODE (ví dụ: LTE thành LTE-A nếu có SCC)
+        echo "$(get_band_string ${ACTIVE/B/}) @$BW MHz" # Trả về chuỗi band tần và băng thông
+    else
+        echo "-" # Nếu SCC không hoạt động, trả về "-"
+    fi
+}
+
+S1BAND=$(get_scc_band 1) # Lấy thông tin SCC 1
+S2BAND=$(get_scc_band 2) # Lấy thông tin SCC 2
+S3BAND=$(get_scc_band 3) # Lấy thông tin SCC 3
+
+# ==== THÔNG TIN 5G NR ====
+# Lấy băng tần 5G NR (nếu có)
+NRBAND=$(echo "$O" | awk '/^SCC. NR5G band:/ {print $4}')
+if [ -n "$NRBAND" ] && [ "$NRBAND" != "---" ]; then
+    MODE="$MODE + n${NRBAND/n/}" # Cập nhật MODE với băng tần 5G (ví dụ: n78)
+    # Lấy các chỉ số tín hiệu 5G và ghi đè nếu có
+    NR_RSRP=$(echo "$O" | awk '/SCC. NR5G RSRP:/ {print $4}')
+    NR_RSRQ=$(echo "$O" | awk '/SCC. NR5G RSRQ:/ {print $4}')
+    NR_SINR=$(echo "$O" | awk '/SCC. NR5G SINR:/ {print $4}')
+    [ -n "$NR_RSRP" ] && RSRP="$NR_RSRP"
+    [ -n "$NR_RSRQ" ] && RSRQ="$NR_RSRQ"
+    [ -n "$NR_SINR" ] && SINR="$NR_SINR"
+fi
+
+# ==== CSQ (Chỉ số chất lượng tín hiệu) ====
+CSQ_LINE=$(get_at_response "AT+CSQ" "+CSQ")
+CSQ=$(echo "$CSQ_LINE" | awk -F: '{print $2}' | awk -F, '{print $1}' | tr -d ' ') # Lấy giá trị CSQ
+if [ -n "$CSQ" ] && [ "$CSQ" -ne 99 ]; then # Nếu CSQ hợp lệ (không phải 99)
+    CSQ_PER=$(expr $CSQ \* 100 / 31) # Chuyển đổi CSQ (0-31) sang tỷ lệ %
+else
+    CSQ="0" # Đặt CSQ = 0 nếu không hợp lệ
+    CSQ_PER="0" # Đặt tỷ lệ % = 0
+fi
+
+# ==== COPS (Thông tin nhà mạng) ====
+sms_tool -d "$DEVICE" at "AT+COPS=3,2" > /dev/null 2>&1 # Đặt chế độ chọn mạng tự động
+COPS_LINE=$(get_at_response "AT+COPS?" "+COPS") # Lấy thông tin nhà mạng
+COPS_NUM=$(echo "$COPS_LINE" | grep -oE '[0-9]{5,6}' | head -1) # Trích xuất số MCC-MNC
+
+# Phân loại nhà mạng dựa trên số MCC-MNC
+case "$COPS_NUM" in
+    "45202") COPS="Vinaphone";;
+    "45201") COPS="Mobifone";;
+    "45204") COPS="Viettel";;
+    *)       COPS="Unknown";; # Nhà mạng không xác định
+esac
+
+COPS_MCC=$(echo "$COPS_NUM" | cut -c1-3) # Lấy MCC
+COPS_MNC=$(echo "$COPS_NUM" | cut -c4-) # Lấy MNC
+
+# ==== PING ĐẾN WEBSITE NHÀ MẠNG ====
+case "$COPS" in
+    "Vinaphone") PING_HOST="vnpt.com.vn";;
+    "Mobifone")  PING_HOST="mobifone.vn";;
+    "Viettel")   PING_HOST="viettel.vn";;
+    *)           PING_HOST="8.8.8.8";;
+esac
+
+# Ping thử 1 gói, lấy time trung bình
+PING_MS=$(ping -c 1 -W 1 "$PING_HOST" 2>/dev/null | awk -F'time=' '/time=/{print $2}' | cut -d' ' -f1)
+[ -z "$PING_MS" ] && PING_MS="-"
+
+# Phân loại độ trễ
+if echo "$PING_MS" | grep -qE '^[0-9.]+'; then
+    PING_MS_VAL=$(printf "%.0f" "$PING_MS")
+    if [ "$PING_MS_VAL" -lt 20 ]; then
+        PING_QUALITY="good"
+    elif [ "$PING_MS_VAL" -lt 50 ]; then
+        PING_QUALITY="fair"
+    elif [ "$PING_MS_VAL" -lt 100 ]; then
+        PING_QUALITY="poor"
+    else
+        PING_QUALITY="bad"
+    fi
+else
+    PING_QUALITY="unreachable"
+fi
+
+
+# ==== CREG (Trạng thái đăng ký mạng) ====
+CREG_LINE=$(get_at_response "AT+CREG?" "+CREG")
+REG_STATUS=$(echo "$CREG_LINE" | awk -F, '{print $2}' | tr -d ' ') # Lấy trạng thái đăng ký (0: ko, 1: da dang ky, 2: dang tim, 5: roaming)
+
+# ==== EARFCN ====
+EARFCN=$(echo "$O" | awk '/^LTE Rx chan:/ {print $4}') # Lấy EARFCN (tần số kênh)
+
+# ==== PROTOCOL ====
+PROTO_INFO=$(awk '/Vendor=1199 ProdID=90d3/{f=1} f && /Driver=/{print; f=0}' /sys/kernel/debug/usb/devices 2>/dev/null)
+case "$PROTO_INFO" in
+    *qmi_wwan*) PROTO="qmi";;
+    *cdc_mbim*) PROTO="mbim";;
+    *cdc_ether*) PROTO="ecm";;
+    *) PROTO="qmi";;
+esac
+
+# Lấy thông tin interface logic (tên trong /etc/config/network)
+# Nếu IFNAME chưa có thì gán mặc định
+[ -z "$IFNAME" ] && IFNAME="5G"
+
+# Nếu IFACE chưa có thì lấy từ ifstatus hoặc detect
+# Xác định interface vật lý đang hoạt động
+IFACE=$(detect_interface)
+
+# Tìm IFNAME logic tương ứng trong ubus (ví dụ: 5G hoặc lan)
+IFNAME=$(ubus -S list network.interface.* | while read iface; do
+    ubus call "$iface" status 2>/dev/null | grep -q "\"l3_device\": \"$IFACE\"" && echo "$iface" | cut -d'.' -f3 && break
+done)
+
+# Fallback mặc định nếu không tìm được
+[ -z "$IFNAME" ] && IFNAME="5G"
+
+
+# Lấy IP WAN (ưu tiên dùng ubus cho chuẩn)
+IP_WAN=$(ubus call network.interface.$IFNAME status 2>/dev/null | jsonfilter -e '@["ipv4-address"][0].address')
+if [ -z "$IP_WAN" ] || [ "$IP_WAN" = "null" ]; then
+    IP_WAN=$(curl -s --max-time 2 https://api.ipify.org?format=json | jsonfilter -e "@.ip")
+fi
+[ -z "$IP_WAN" ] && IP_WAN="-"
+
+
+# Lấy uptime của interface mạng
+IFACE=$(detect_interface)
+IFNAME=$(ubus -S list network.interface.* | grep "$IFACE" | cut -d'.' -f3 | head -n1)
+[ -z "$IFNAME" ] && IFNAME="5G"
+
+# Lấy uptime chính xác theo IFNAME
+# Lấy uptime từ interface logic
+UPTIME_NETWORK=$(ubus call network.interface."$IFNAME" status 2>/dev/null | jsonfilter -e "@.uptime")
+FINAL_UPTIME=0
+if [ -n "$UPTIME_NETWORK" ] && echo "$UPTIME_NETWORK" | grep -qE '^[0-9]+$'; then
+    FINAL_UPTIME=$UPTIME_NETWORK
+elif [ -f "/proc/uptime" ]; then
+    FINAL_UPTIME=$(cut -d. -f1 /proc/uptime)
+fi
+
+
+# Nếu không có, fallback về hệ thống
+FINAL_UPTIME=0
+if [ -n "$UPTIME_NETWORK" ] && echo "$UPTIME_NETWORK" | grep -qE '^[0-9]+$'; then
+    FINAL_UPTIME=$UPTIME_NETWORK
+elif [ -f "/proc/uptime" ]; then
+    FINAL_UPTIME=$(cut -d. -f1 /proc/uptime)
+fi
+
+# Định dạng
+CONN_TIME=$(printf "%02d:%02d:%02d" $((FINAL_UPTIME/3600)) $((FINAL_UPTIME%3600/60)) $((FINAL_UPTIME%60)))
+
+
+# Lấy số byte Rx/Tx hiện tại từ thống kê hệ thống
+RX_BYTES=$(cat /sys/class/net/"$IFACE"/statistics/rx_bytes 2>/dev/null)
+TX_BYTES=$(cat /sys/class/net/"$IFACE"/statistics/tx_bytes 2>/dev/null)
+[ -z "$RX_BYTES" ] && RX_BYTES=0
+[ -z "$TX_BYTES" ] && TX_BYTES=0
+
+
+# ==== TÍNH TOÁN TỐC ĐỘ RX/TX ====
+DIFF_RX_BYTES=0 # Chênh lệch byte nhận
+DIFF_TX_BYTES=0 # Chênh lệch byte gửi
+TIME_DIFF=0     # Chênh lệch thời gian
+
+# Lấy các giá trị mẫu Rx/Tx bytes và thời gian từ lần lấy mẫu trước
+LAST_RX_BYTES=$(get_safe_value "$LAST_RX_BYTES_FILE" 0)
+LAST_TX_BYTES=$(get_safe_value "$LAST_TX_BYTES_FILE" 0)
+LAST_SAMPLE_TIME=$(get_safe_value "$LAST_SAMPLE_TIME_FILE" 0)
+
+# Lấy thời điểm lấy mẫu hiện tại (chuẩn Unix timestamp)
+CURRENT_SAMPLE_TIME=$(date +%s)
+
+# Tính toán chênh lệch thời gian và byte nếu có dữ liệu mẫu trước đó
+if [ "$LAST_SAMPLE_TIME" -gt 0 ]; then
+    TIME_DIFF=$((CURRENT_SAMPLE_TIME - LAST_SAMPLE_TIME))
+    DIFF_RX_BYTES=$((RX_BYTES - LAST_RX_BYTES))
+    DIFF_TX_BYTES=$((TX_BYTES - LAST_TX_BYTES))
+
+    if [ "$TIME_DIFF" -gt 0 ]; then
+        RX_SPEED_BPS=$(awk "BEGIN { printf \"%.0f\", ($DIFF_RX_BYTES / $TIME_DIFF) }")
+        TX_SPEED_BPS=$(awk "BEGIN { printf \"%.0f\", ($DIFF_TX_BYTES / $TIME_DIFF) }")
+    else
+        RX_SPEED_BPS=0
+        TX_SPEED_BPS=0
+    fi
+else
+    RX_SPEED_BPS=0
+    TX_SPEED_BPS=0
+fi
+
+# Định dạng tốc độ sang đơn vị dễ đọc (KB/s, MB/s)
+RX_SPEED_FORMAT=$(format_speed "$RX_SPEED_BPS")
+TX_SPEED_FORMAT=$(format_speed "$TX_SPEED_BPS")
+
+# ==== KIỂM TRA TRẠNG THÁI KẾT NỐI ====
+if [ "$IP_WAN" = "-" ]; then # Nếu không có IP WAN hợp lệ
+    STATUS="disconnected"
+    CONNECTION_STATUS="Disconnected"
+else
+    STATUS="connected"
+    CONNECTION_STATUS="Connected"
+fi
+
+# ==== XỬ LÝ YÊU CẦU RESTART ====
+# Kiểm tra chuỗi truy vấn để tìm hành động "restart"
+if echo "$QUERY_STRING" | grep -q "action=restart"; then
+    echo '{"status":"running","message":"Restarting..."}' >&2 # Ghi thông báo lỗi ra stderr
+    # Thực hiện lệnh AT để tắt rồi bật modem
+    (
+        echo -e "AT+CFUN=4\r" # Tắt modem
+        sleep 2
+        echo -e "AT+CFUN=1\r" # Bật lại modem
+    ) > "$DEVICE" # Ghi các lệnh vào thiết bị serial
+    sleep 2 # Chờ một chút để modem khởi động lại
+    echo '{"status":"ok"}' # Trả về kết quả thành công
+    exit 0 # Thoát script
+fi
+#============================================
+# ==== XỬ LÝ YÊU CẦU SET APN MỚI ====
+if echo "$QUERY_STRING" | grep -q "action=set_apn"; then
+    # Tách giá trị APN từ chuỗi truy vấn
+    NEW_APN=$(echo "$QUERY_STRING" | sed -n 's/.*value=\([^&]*\).*/\1/p' | sed 's/%20/ /g' | sed 's/[^a-zA-Z0-9._-]//g')
+
+    # Kiểm tra có giá trị hay không
+    if [ -n "$NEW_APN" ]; then
+        echo "DEBUG_APN: Nhận yêu cầu set APN mới: $NEW_APN" >> /tmp/apn_debug.log
+
+        # Ghi vào cấu hình UCI cho interface '5G'
+        uci set network.5G.apn="$NEW_APN"
+        uci commit network
+
+        # Khởi động lại mạng (background để không chặn)
+        /etc/init.d/network restart >/dev/null 2>&1 &
+
+        # Trả kết quả thành công
+        echo "Content-Type: application/json"
+        echo ""
+        echo '{"status":"ok", "apn":"'"$NEW_APN"'"}'
+    else
+        echo "Content-Type: application/json"
+        echo ""
+        echo '{"status":"fail", "message":"APN không hợp lệ"}'
+    fi
+    exit 0
+fi
+
+
+# ==== LƯU TRỮ THÔNG TIN MẪU CHO LẦN SAU ====
+# Ghi số byte Rx/Tx hiện tại và thời gian lấy mẫu vào các tệp tạm
+echo "$RX_BYTES" > "$LAST_RX_BYTES_FILE"
+echo "$TX_BYTES" > "$LAST_TX_BYTES_FILE"
+echo "$CURRENT_SAMPLE_TIME" > "$LAST_SAMPLE_TIME_FILE"
+
+# ==== IN DỮ LIỆU DƯỚI DẠNG JSON ====
+cat << JSONEOF
+{
+    "conn_time": "$CONN_TIME",
+    "status": "$(sanitize_string "$STATUS")",
+    "connection_status": "$(sanitize_string "$CONNECTION_STATUS")",
+    "ip_wan": "$(sanitize_string "$IP_WAN")",
+    "current_apn": "$(sanitize_string "$CURRENT_APN")",
+    "dns_servers": "$(sanitize_string "$DNS_SERVERS")",
+    "interface": "$(sanitize_string "$IFACE")",
+    "modem": "Sierra Wireless AirPrime EM9190 5G NR",
+    "model": "$(sanitize_string "$MODEL")",
+    "mtemp": "$(sanitize_string "$TEMP")",
+    "temperature": "$(sanitize_string "$TEMP")",
+    "firmware": "SWIX55C_03.10.07.00",
+    "cport": "$(sanitize_string "$DEVICE")",
+    "protocol": "$(sanitize_string "$PROTO")",
+    "csq": "$(sanitize_number "$CSQ")",
+    "signal": "$(sanitize_number "$CSQ_PER")",
+    "operator": "$(sanitize_string "$COPS")",
+    "operator_name": "$(sanitize_string "$COPS")",
+    "operator_mcc": "$(sanitize_string "$COPS_MCC")",
+    "operator_mnc": "$(sanitize_string "$COPS_MNC")",
+    "mcc_mnc": "$(sanitize_string "$COPS_MCC-$COPS_MNC")",
+    "location": "$(get_country_from_mcc "$COPS_MCC")",
+    "technology": "$(sanitize_string "$MODE")",
+    "mode": "$(sanitize_string "$MODE")",
+    "registration": "$(sanitize_string "$REG_STATUS")",
+    "imei": "$(sanitize_string "$IMEI")",
+    "imsi": "$(sanitize_string "$IMSI")",
+    "iccid": "$(sanitize_string "$ICCID")",
+    "lac_dec": "$(sanitize_number "$TAC_DEC")",
+    "lac_hex": "$(sanitize_string "$TAC_HEX")",
+    "cid_dec": "$(sanitize_number "$CID_DEC")",
+    "cid_hex": "$(sanitize_string "$CID_HEX")",
+    "pci": "$(sanitize_number "$PCI")",
+    "earfcn": "$(sanitize_number "$EARFCN")",
+    "band": "$(sanitize_string "$PBAND")",
+    "pband": "$(sanitize_string "$PBAND")",
+    "s1band": "$(sanitize_string "$S1BAND")",
+    "s2band": "$(sanitize_string "$S2BAND")",
+    "s3band": "$(sanitize_string "$S3BAND")",
+    "rsrp": "$(sanitize_number "$RSRP")",
+    "rsrq": "$(sanitize_number "$RSRQ")",
+    "rssi": "$(sanitize_number "$RSSI")",
+    "sinr": "$(sanitize_number "$SINR")",
+	"rx_data": $(sanitize_number "$RX_BYTES"),
+	"tx_data": $(sanitize_number "$TX_BYTES"),
+    "rx_speed": "$RX_SPEED_FORMAT",
+    "tx_speed": "$TX_SPEED_FORMAT",
+    "ping": "$(sanitize_string "$PING_MS")",
+    "ping_host": "$(sanitize_string "$PING_HOST")",
+    "ping_quality": "$(sanitize_string "$PING_QUALITY")"
+}
+JSONEOF
